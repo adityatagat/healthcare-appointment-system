@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - NODE_ENV=development
+      - PORT=8000
+    depends_on:
+      - user-service
+      - appointment-service
+    networks:
+      - healthcare-network
+
+  # User Service
+  user-service:
+    build: ./services/user-service
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_URI=mongodb://mongo:27017/user-service
+    depends_on:
+      - mongo
+    networks:
+      - healthcare-network
+
+  # Appointment Service
+  appointment-service:
+    build: ./services/appointment-service
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DB_URI=postgresql://postgres:postgres@postgres:5432/appointment-service
+    depends_on:
+      - postgres
+    networks:
+      - healthcare-network
+
+  # MongoDB for User Service
+  mongo:
+    image: mongo:6.0
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "27017:27017"
+    networks:
+      - healthcare-network
+
+  # PostgreSQL for other services
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=appointment-service
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - healthcare-network
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - healthcare-network
+
+  # Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - type: bind
+        source: ./monitoring/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        read_only: true
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - healthcare-network
+
+  # Logging
+  loki:
+    image: grafana/loki:2.8.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ./monitoring/loki:/etc/loki
+      - loki-data:/loki
+    environment:
+      - LOKI_CONFIG_USE_LOKI_CONFIG=true
+    user: "0:0"  # Run as root to ensure proper permissions
+    networks:
+      - healthcare-network
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_FEATURE_TOGGLES_ENABLE=tempoSearch tempoBackendSearch tempoServiceGraph
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      - loki
+    networks:
+      - healthcare-network
+
+networks:
+  healthcare-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  postgres-data:
+  loki-data:
+  grafana-storage:

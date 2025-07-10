@@ -1,0 +1,74 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      working-directory: ./api-gateway
+      run: npm ci
+      
+    - name: Run linting
+      working-directory: ./api-gateway
+      run: npm run lint
+      
+    - name: Run tests
+      working-directory: ./api-gateway
+      env:
+        NODE_ENV: test
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+      run: |
+        npm test -- --coverage
+        
+    - name: Upload test coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./api-gateway/coverage/lcov.info
+        fail_ci_if_error: false
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Run npm audit
+      working-directory: ./api-gateway
+      run: npm audit --production
+      
+    - name: Run dependency-check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'api-gateway'
+        path: './api-gateway'
+        format: 'HTML'
+        fail_on_cvss_above: 'HIGH'

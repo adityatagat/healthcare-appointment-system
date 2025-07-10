@@ -1,0 +1,209 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  DOCKER_IMAGE: ghcr.io/${{ github.repository }}/api-gateway
+  DOCKER_TAG: ${{ github.sha }}
+  KUBE_NAMESPACE: healthcare-app
+  
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: |
+        cd api-gateway
+        npm ci
+        
+    - name: Run tests
+      working-directory: ./api-gateway
+      env:
+        NODE_ENV: test
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+      run: |
+        npm test -- --coverage
+        
+    - name: Upload test coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./api-gateway/coverage/lcov.info
+        fail_ci_if_error: false
+
+  build-and-push:
+    name: Build and Push Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Extract metadata (tags, labels) for Docker
+      id: meta
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ env.DOCKER_IMAGE }}
+        tags: |
+          type=sha,format=long
+          type=ref,event=branch
+          type=ref,event=pr
+          
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: ./api-gateway
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=ghac,mode=max
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: build-and-push
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+    - name: Check for required secrets
+      if: secrets.KUBE_CONFIG_STAGING == ''
+      run: |
+        echo "::error::KUBE_CONFIG_STAGING secret is not configured"
+        exit 1
+        
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v3
+      
+    - name: Configure Kubernetes
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
+        
+    - name: Deploy to Kubernetes (Staging)
+      env:
+        KUBE_NAMESPACE: ${{ env.KUBE_NAMESPACE }}-staging
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        kubectl apply -f ./k8s/namespace.yaml
+        kubectl apply -f ./k8s/configmap.yaml -n $KUBE_NAMESPACE
+        kubectl apply -f ./k8s/secret.yaml -n $KUBE_NAMESPACE
+        cat ./k8s/deployment.yaml | \
+          sed "s|{{IMAGE_TAG}}|$IMAGE_TAG|g" | \
+          kubectl apply -f - -n $KUBE_NAMESPACE
+        kubectl apply -f ./k8s/service.yaml -n $KUBE_NAMESPACE
+        kubectl apply -f ./k8s/ingress.yaml -n $KUBE_NAMESPACE
+        
+        # Wait for deployment to complete
+        kubectl rollout status deployment/api-gateway -n $KUBE_NAMESPACE --timeout=300s
+
+  deploy-production:
+    name: Deploy to Production (Blue-Green)
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+    - name: Check for required secrets
+      if: secrets.KUBE_CONFIG_PRODUCTION == ''
+      run: |
+        echo "::error::KUBE_CONFIG_PRODUCTION secret is not configured"
+        exit 1
+        
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v3
+      
+    - name: Configure Kubernetes
+      uses: azure/k8s-set-context@v3
+      with:
+        method: kubeconfig
+        kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+        
+    - name: Deploy to Kubernetes (Production - Blue-Green)
+      env:
+        KUBE_NAMESPACE: ${{ env.KUBE_NAMESPACE }}-production
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Apply common resources
+        kubectl apply -f ./k8s/namespace.yaml
+        kubectl apply -f ./k8s/configmap.yaml -n $KUBE_NAMESPACE
+        kubectl apply -f ./k8s/secret.yaml -n $KUBE_NAMESPACE
+        
+        # Determine current active deployment (blue or green)
+        CURRENT_COLOR=$(kubectl get svc api-gateway -n $KUBE_NAMESPACE -o jsonpath='{.spec.selector.app.kubernetes.io/color}') || true
+        
+        if [ "$CURRENT_COLOR" = "blue" ]; then
+          NEW_COLOR=green
+        else
+          NEW_COLOR=blue
+        fi
+        
+        echo "Current active color: ${CURRENT_COLOR:-none}"
+        echo "Deploying to: $NEW_COLOR"
+        
+        # Deploy new version
+        cat ./k8s/deployment.yaml | \
+          sed "s|{{IMAGE_TAG}}|$IMAGE_TAG|g" | \
+          sed "s|blue|$NEW_COLOR|g" | \
+          kubectl apply -f - -n $KUBE_NAMESPACE
+        
+        # Wait for new deployment to be ready
+        kubectl rollout status deployment/api-gateway-$NEW_COLOR -n $KUBE_NAMESPACE --timeout=300s
+        
+        # Update service to point to new deployment
+        cat ./k8s/service.yaml | \
+          sed "s|blue|$NEW_COLOR|g" | \
+          kubectl apply -f - -n $KUBE_NAMESPACE
+        
+        # Clean up old deployment if it exists
+        if [ -n "$CURRENT_COLOR" ]; then
+          echo "Cleaning up old deployment: $CURRENT_COLOR"
+          kubectl delete deployment api-gateway-$CURRENT_COLOR -n $KUBE_NAMESPACE || true
+        fi
+        
+        # Apply ingress (if not already applied)
+        kubectl apply -f ./k8s/ingress.yaml -n $KUBE_NAMESPACE

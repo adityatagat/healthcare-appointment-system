@@ -1,0 +1,17 @@
+apiVersion: v2
+name: api-gateway
+description: A Helm chart for Healthcare Appointment System API Gateway
+
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - healthcare
+  - appointment
+  - api-gateway
+  - nodejs
+
+maintainers:
+  - name: Healthcare Team
+    url: https://github.com/yourorg/healthcare-appointment-system

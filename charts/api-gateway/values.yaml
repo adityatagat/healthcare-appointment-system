@@ -1,0 +1,115 @@
+# Default values for api-gateway
+replicaCount: 2
+
+image:
+  repository: ghcr.io/yourorg/api-gateway
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: http
+  nodePort: null
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+  hosts:
+    - host: api.yourdomain.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: api-tls-secret
+      hosts:
+        - api.yourdomain.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Configuration for environment variables
+config:
+  NODE_ENV: production
+  LOG_LEVEL: info
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+
+# Secret values (will be set via --set or secrets manager)
+secrets: {}
+  # adminApiKey: ""
+  # userApiKey: ""
+  # jwtSecret: ""
+
+# For blue-green deployment configuration
+deployment:
+  strategy: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+  readinessProbe:
+    path: /health
+    port: http
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+  livenessProbe:
+    path: /health
+    port: http
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# For blue-green deployment
+blueGreen:
+  enabled: true
+  activeService: blue
+  previewService: green
+  autoPromotionEnabled: true
+  autoPromotionSeconds: 30
