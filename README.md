@@ -11,6 +11,32 @@ A microservices-based healthcare appointment platform connecting patients with h
 - **Monitoring & Logging** integration
 - **Automated Testing** with code coverage
 
+## Issue Management
+
+We use GitHub Issues to track bugs, feature requests, and other tasks. Please use the appropriate template when creating a new issue:
+
+### 🐛 Bug Reports
+Found a bug? Please [create a bug report](/.github/ISSUE_TEMPLATE/bug_report.md) with:
+- Steps to reproduce the issue
+- Expected vs actual behavior
+- Environment details
+- Any relevant screenshots or logs
+
+### ✨ Feature Requests
+Have an idea for a new feature? [Submit a feature request](/.github/ISSUE_TEMPLATE/feature_request.md) that includes:
+- The problem you're trying to solve
+- Your proposed solution
+- Any alternative approaches considered
+
+### 🔒 Security Issues
+**Important**: If you've discovered a security vulnerability, please **do not** create a public issue. Instead, please follow our [security issue reporting process](/.github/ISSUE_TEMPLATE/security_issue.md).
+
+### Before Submitting
+- Check existing issues to avoid duplicates
+- Be clear and concise in your description
+- Include relevant context and examples
+- For code contributions, reference the related issue number
+
 ## CI/CD Pipeline
 
 The project includes GitHub Actions workflows for:
