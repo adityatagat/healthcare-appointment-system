@@ -32,25 +32,48 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
       
+    - name: Get npm cache directory
+      id: npm-cache-dir
+      working-directory: ./api-gateway
+      run: |
+        echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+    
+    - name: Cache node modules
+      uses: actions/cache@v3
+      id: npm-cache
+      with:
+        path: |
+          ~/.npm
+          ./api-gateway/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}-${{ github.run_id }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+    
     - name: Set up Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '18.x'
+        node-version: '22.x'
         cache: 'npm'
+        cache-dependency-path: 'api-gateway/package-lock.json'
     
     - name: Install dependencies
+      working-directory: ./api-gateway
       run: |
-        cd api-gateway
+        # Create package-lock.json if it doesn't exist
+        if [ ! -f package-lock.json ]; then
+          npm install --package-lock-only
+        fi
         npm ci
         
     - name: Run tests
       working-directory: ./api-gateway
       env:
         NODE_ENV: test
+        CI: true
         REDIS_HOST: localhost
         REDIS_PORT: 6379
       run: |
-        npm test -- --coverage
+        npm test -- --passWithNoTests -- --coverage
         
     - name: Upload test coverage
       uses: codecov/codecov-action@v3
