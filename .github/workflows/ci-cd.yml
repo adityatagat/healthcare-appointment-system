@@ -37,11 +37,14 @@ jobs:
       with:
         node-version: '18.x'
         cache: 'npm'
-        cache-dependency-path: 'api-gateway/package-lock.json'
     
     - name: Install dependencies
       working-directory: ./api-gateway
       run: |
+        # Create package-lock.json if it doesn't exist
+        if [ ! -f package-lock.json ]; then
+          npm install --package-lock-only
+        fi
         npm ci
         
     - name: Run tests
