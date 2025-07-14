@@ -1,0 +1,58 @@
+2025-07-10 18:57:43 [[31merror[39m]: 	[31mError connecting to MongoDB: getaddrinfo ENOTFOUND mongodb[39m
+2025-07-14 06:23:03 [[31merror[39m]: 	[31mCreate appointment error: Error: Doctor is not available at the requested time[39m
+2025-07-14 06:23:03 [[31merror[39m]: 	[31mError: Doctor is not available at the requested time[39m
+2025-07-14 06:23:03 [[31merror[39m]: 	[31mStack: Error: Doctor is not available at the requested time[39m
+[31m    at AppointmentService.checkAvailability (/app/src/services/appointment.service.ts:229:13)[39m
+[31m    at processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+[31m    at AppointmentService.createAppointment (/app/src/services/appointment.service.ts:43:5)[39m
+[31m    at createAppointment (/app/src/controllers/appointment.controller.ts:30:27)[39m
+2025-07-14 06:23:03 [[31merror[39m]: 	[31mRequest: POST /api/v1/appointments/appointments[39m
+2025-07-14 06:23:03 [[31merror[39m]: 	[31mBody: {"patientId":"64d5f7b3e8b9f6b5e8f7c6d5","doctorId":"64d5f7b3e8b9f6b5e8f7c6d6","appointmentDate":"2025-08-15","startTime":"10:00","endTime":"10:30","reason":"Routine checkup","notes":"Annual physical examination","isFollowUp":false}[39m
+2025-07-14 06:23:03 [[31merror[39m]: 	[31mParams: {}[39m
+2025-07-14 06:23:03 [[31merror[39m]: 	[31mQuery: {}[39m
+2025-07-14 06:40:28 [[31merror[39m]: 	[31mCreate appointment error: Error: Doctor is not available at the requested time[39m
+2025-07-14 06:40:28 [[31merror[39m]: 	[31mError: Doctor is not available at the requested time[39m
+2025-07-14 06:40:28 [[31merror[39m]: 	[31mStack: Error: Doctor is not available at the requested time[39m
+[31m    at AppointmentService.createAppointment (/app/src/services/appointment.service.ts:45:13)[39m
+[31m    at processTicksAndRejections (node:internal/process/task_queues:95:5)[39m
+[31m    at createAppointment (/app/src/controllers/appointment.controller.ts:41:27)[39m
+2025-07-14 06:40:28 [[31merror[39m]: 	[31mRequest: POST /api/v1/appointments/appointments[39m
+2025-07-14 06:40:28 [[31merror[39m]: 	[31mBody: {"patientId":"64d5f7b3e8b9f6b5e8f7c6d5","doctorId":"64d5f7b3e8b9f6b5e8f7c6d6","appointmentDate":"2025-08-15","startTime":"10:00","endTime":"10:30","reason":"Routine checkup","notes":"Annual physical examination"}[39m
+2025-07-14 06:40:28 [[31merror[39m]: 	[31mParams: {}[39m
+2025-07-14 06:40:28 [[31merror[39m]: 	[31mQuery: {}[39m
+2025-07-14 06:41:05 [[31merror[39m]: 	[31mMissingSchemaError: Schema hasn't been registered for model "Patient".[39m
+[31mUse mongoose.model(name, schema)[39m
+2025-07-14 06:41:05 [[31merror[39m]: 	[31mStack: MissingSchemaError: Schema hasn't been registered for model "Patient".[39m
+[31mUse mongoose.model(name, schema)[39m
+[31m    at NativeConnection.Connection.model (/app/node_modules/mongoose/lib/connection.js:1136:13)[39m
+[31m    at _getModelFromConn (/app/node_modules/mongoose/lib/helpers/populate/getModelsMapForPopulate.js:585:15)[39m
+[31m    at addModelNamesToMap (/app/node_modules/mongoose/lib/helpers/populate/getModelsMapForPopulate.js:512:17)[39m
+[31m    at getModelsMapForPopulate (/app/node_modules/mongoose/lib/helpers/populate/getModelsMapForPopulate.js:201:7)[39m
+[31m    at populate (/app/node_modules/mongoose/lib/model.js:4394:21)[39m
+[31m    at _populate (/app/node_modules/mongoose/lib/model.js:4354:5)[39m
+[31m    at /app/node_modules/mongoose/lib/model.js:4326:5[39m
+[31m    at new Promise (<anonymous>)[39m
+[31m    at Function.populate (/app/node_modules/mongoose/lib/model.js:4325:10)[39m
+[31m    at /app/node_modules/mongoose/lib/query.js:2521:11[39m
+2025-07-14 06:41:05 [[31merror[39m]: 	[31mRequest: GET /api/v1/appointments/appointments/6874a67e14a744ec49ec76cf[39m
+2025-07-14 06:41:05 [[31merror[39m]: 	[31mBody: {}[39m
+2025-07-14 06:41:05 [[31merror[39m]: 	[31mParams: {}[39m
+2025-07-14 06:41:05 [[31merror[39m]: 	[31mQuery: {}[39m
+2025-07-14 06:41:09 [[31merror[39m]: 	[31mMissingSchemaError: Schema hasn't been registered for model "Doctor".[39m
+[31mUse mongoose.model(name, schema)[39m
+2025-07-14 06:41:09 [[31merror[39m]: 	[31mStack: MissingSchemaError: Schema hasn't been registered for model "Doctor".[39m
+[31mUse mongoose.model(name, schema)[39m
+[31m    at NativeConnection.Connection.model (/app/node_modules/mongoose/lib/connection.js:1136:13)[39m
+[31m    at _getModelFromConn (/app/node_modules/mongoose/lib/helpers/populate/getModelsMapForPopulate.js:585:15)[39m
+[31m    at addModelNamesToMap (/app/node_modules/mongoose/lib/helpers/populate/getModelsMapForPopulate.js:512:17)[39m
+[31m    at getModelsMapForPopulate (/app/node_modules/mongoose/lib/helpers/populate/getModelsMapForPopulate.js:201:7)[39m
+[31m    at populate (/app/node_modules/mongoose/lib/model.js:4394:21)[39m
+[31m    at _populate (/app/node_modules/mongoose/lib/model.js:4354:5)[39m
+[31m    at /app/node_modules/mongoose/lib/model.js:4326:5[39m
+[31m    at new Promise (<anonymous>)[39m
+[31m    at Function.populate (/app/node_modules/mongoose/lib/model.js:4325:10)[39m
+[31m    at model.Query._find (/app/node_modules/mongoose/lib/query.js:2320:20)[39m
+2025-07-14 06:41:09 [[31merror[39m]: 	[31mRequest: GET /api/v1/appointments/patients/64d5f7b3e8b9f6b5e8f7c6d5/appointments[39m
+2025-07-14 06:41:09 [[31merror[39m]: 	[31mBody: {}[39m
+2025-07-14 06:41:09 [[31merror[39m]: 	[31mParams: {}[39m
+2025-07-14 06:41:09 [[31merror[39m]: 	[31mQuery: {}[39m
