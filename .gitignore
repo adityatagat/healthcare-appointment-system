@@ -1,3 +1,4 @@
 api-gateway/node_modules
 appointment-service/node_modules
 user-service/node_modules
+services/appointment-service/logs
