@@ -1,0 +1,10 @@
+{
+  "patientId": "64d5f7b3e8b9f6b5e8f7c6d5",
+  "doctorId": "64d5f7b3e8b9f6b5e8f7c6d6",
+  "appointmentDate": "2025-08-15",
+  "startTime": "10:00",
+  "endTime": "10:30",
+  "reason": "Routine checkup",
+  "notes": "Annual physical examination",
+  "isFollowUp": false
+}
