@@ -126,7 +126,7 @@ jobs:
     
     steps:
     - name: Check for required secrets
-      if: secrets.KUBE_CONFIG_STAGING == ''
+      if: "${{ secrets.KUBE_CONFIG_STAGING == '' }}"
       run: |
         echo "::error::KUBE_CONFIG_STAGING secret is not configured"
         exit 1
@@ -169,7 +169,7 @@ jobs:
     
     steps:
     - name: Check for required secrets
-      if: secrets.KUBE_CONFIG_PRODUCTION == ''
+      if: "${{ secrets.KUBE_CONFIG_PRODUCTION == '' }}"
       run: |
         echo "::error::KUBE_CONFIG_PRODUCTION secret is not configured"
         exit 1
