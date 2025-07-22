@@ -1,0 +1,9 @@
+com/healthcare/providerservice/model/Practice.class
+com/healthcare/providerservice/model/Provider.class
+com/healthcare/providerservice/ProviderServiceApplication.class
+com/healthcare/providerservice/controller/ProviderController.class
+com/healthcare/providerservice/controller/PracticeController.class
+com/healthcare/providerservice/service/ProviderService.class
+com/healthcare/providerservice/repository/PracticeRepository.class
+com/healthcare/providerservice/repository/ProviderRepository.class
+com/healthcare/providerservice/service/PracticeService.class
