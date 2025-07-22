@@ -1,6 +1,6 @@
 # Kubernetes Deployment Guide
 
-This directory contains Kubernetes manifests for deploying the Healthcare Appointment System API Gateway.
+This directory contains the Kubernetes manifests for deploying the Healthcare Appointment System API Gateway.
 
 ## Prerequisites
 
@@ -15,7 +15,7 @@ This directory contains Kubernetes manifests for deploying the Healthcare Appoin
 
 ### 1. Create Namespace
 
-```bash
+```bash 
 kubectl apply -f namespace.yaml
 ```
 
