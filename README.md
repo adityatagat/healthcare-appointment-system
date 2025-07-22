@@ -8,7 +8,12 @@ A microservices-based healthcare appointment platform connecting patients with h
 - **Microservices Architecture** for scalability and maintainability
 - **CI/CD Pipeline** with GitHub Actions
 - **Kubernetes Deployment** with blue-green deployment strategy
-- **Monitoring & Logging** integration
+- **Comprehensive Monitoring & Observability**
+  - Metrics collection with Prometheus
+  - Distributed tracing with OpenTelemetry
+  - Centralized logging with Loki
+  - Visualization with Grafana
+  - Alerting with Alertmanager
 - **Automated Testing** with code coverage
 
 ## Issue Management
@@ -57,6 +62,35 @@ The project includes GitHub Actions workflows for:
 
 - **Staging**: Automatically deployed from `develop` branch
 - **Production**: Manually triggered from `main` branch with blue-green deployment
+
+## Monitoring & Observability
+
+The system includes a comprehensive monitoring stack built with:
+
+- **Prometheus** for metrics collection and alerting
+- **Grafana** for visualization and dashboards
+- **Loki** for log aggregation
+- **Alertmanager** for alert routing and notification
+
+### Key Metrics Tracked
+
+- **Service Health**: Uptime, error rates, and response times
+- **Resource Usage**: CPU, memory, and disk utilization
+- **Business Metrics**: Appointment booking rates, active users, and provider availability
+- **API Performance**: Request latency, throughput, and error rates
+
+### Accessing Monitoring Tools
+
+When running locally with Docker Compose:
+
+- **Grafana**: http://localhost:3000
+  - Default credentials: admin/admin
+- **Prometheus**: http://localhost:9090
+- **Loki**: http://localhost:3100
+
+### Setting Up Alerts
+
+Alerts are configured in the Prometheus configuration and can be managed through the Alertmanager web interface at http://localhost:9093
 
 ## Architecture Overview
 

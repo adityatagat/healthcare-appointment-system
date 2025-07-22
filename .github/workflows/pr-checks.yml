@@ -71,4 +71,4 @@ jobs:
         project: 'api-gateway'
         path: './api-gateway'
         format: 'HTML'
-        fail_on_cvss_above: 'HIGH'
+        args: '--failOnCVSS 7'

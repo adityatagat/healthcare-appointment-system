@@ -2,3 +2,6 @@ api-gateway/node_modules
 appointment-service/node_modules
 user-service/node_modules
 services/appointment-service/logs
+services/appointment-service/logs/combined.log
+services/provider-service/logs
+services/provider-service/logs/combined.log
