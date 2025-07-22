@@ -96,4 +96,4 @@ jobs:
         project: 'api-gateway'
         path: './api-gateway'
         format: 'HTML'
-        # Remove invalid parameter fail_on_cvss_above
+        args: '--failOnCVSS 7'

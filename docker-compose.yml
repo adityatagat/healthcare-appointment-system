@@ -31,17 +31,95 @@ services:
 
   # Appointment Service
   appointment-service:
-    build: ./services/appointment-service
+    build:
+      context: ./services/appointment-service
+      target: development
+    container_name: appointment-service
     ports:
       - "3002:3000"
     environment:
       - NODE_ENV=development
       - PORT=3000
       - DB_URI=postgresql://postgres:postgres@postgres:5432/appointment-service
+      - METRICS_ENABLED=true
+      - METRICS_PATH=/metrics
+      - LOG_LEVEL=debug
+      - PROMETHEUS_SERVER_PORT=3000
+    volumes:
+      - ./services/appointment-service:/app
+      - /app/node_modules
+      - appointment_logs:/app/logs
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - healthcare-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=3000"
+      - "prometheus.path=/metrics"
+      - "loki.service=appointment-service"
+
+  # Provider Service
+  provider-service:
+    build: ./services/provider-service
+    ports:
+      - "3003:3003"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATA_MONGODB_URI=mongodb://provider_service:provider_password@provider-mongodb:27017/healthcare_providers?authSource=admin
+      - SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE=admin
+      - MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE=health,info,metrics,prometheus
+      - MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS=always
+      - MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED=true
+      - MANAGEMENT_METRICS_TAG_APPLICATION=provider-service
+      - MANAGEMENT_METRICS_TAG_REGION=local
+      - LOKI_URL=http://loki:3100
+    depends_on:
+      - provider-mongodb
+    networks:
+      - healthcare-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=3003"
+      - "prometheus.path=/actuator/prometheus"
+      - "loki.service=provider-service"
+
+  # Provider MongoDB
+  provider-mongodb:
+    image: mongo:6.0
+    container_name: provider-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+      MONGO_INITDB_DATABASE: healthcare_providers
+    volumes:
+      - provider_mongodb_data:/data/db
+      - ./services/provider-service/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh -u root -p example localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - healthcare-network
+    restart: unless-stopped
+    labels:
+      - "loki.service=provider-mongodb"
 
   # MongoDB for User Service
   mongo:
@@ -74,6 +152,8 @@ services:
       - "6379:6379"
     networks:
       - healthcare-network
+    labels:
+      - "loki.service=redis"
 
   # Monitoring
   prometheus:
@@ -131,5 +211,7 @@ networks:
 volumes:
   mongo-data:
   postgres-data:
+  provider_mongodb_data:
   loki-data:
   grafana-storage:
+  appointment_logs:
