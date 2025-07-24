@@ -125,40 +125,36 @@ jobs:
     environment: staging
     
     steps:
-    - name: Check for required secrets
-      if: "${{ secrets.KUBE_CONFIG_STAGING == '' }}"
-      run: |
-        echo "::error::KUBE_CONFIG_STAGING secret is not configured"
-        exit 1
-        
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: Set AKS context
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: '<RESOURCE_GROUP_NAME>'
+        cluster-name: '<AKS_CLUSTER_NAME>'
+
     - name: Checkout code
       uses: actions/checkout@v3
-      
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v3
-      
-    - name: Configure Kubernetes
-      uses: azure/k8s-set-context@v3
-      with:
-        method: kubeconfig
-        kubeconfig: ${{ secrets.KUBE_CONFIG_STAGING }}
         
     - name: Deploy to Kubernetes (Staging)
       env:
         KUBE_NAMESPACE: ${{ env.KUBE_NAMESPACE }}-staging
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        kubectl apply -f ./k8s/namespace.yaml
-        kubectl apply -f ./k8s/configmap.yaml -n $KUBE_NAMESPACE
-        kubectl apply -f ./k8s/secret.yaml -n $KUBE_NAMESPACE
-        cat ./k8s/deployment.yaml | \
-          sed "s|{{IMAGE_TAG}}|$IMAGE_TAG|g" | \
-          kubectl apply -f - -n $KUBE_NAMESPACE
-        kubectl apply -f ./k8s/service.yaml -n $KUBE_NAMESPACE
-        kubectl apply -f ./k8s/ingress.yaml -n $KUBE_NAMESPACE
-        
-        # Wait for deployment to complete
-        kubectl rollout status deployment/api-gateway -n $KUBE_NAMESPACE --timeout=300s
+        # The AZURE_CREDENTIALS secret is expected to be set in the repository's secrets configuration.
+        helm upgrade --install api-gateway-staging ./k8s --namespace $KUBE_NAMESPACE \
+          --set image.repository=${{ env.DOCKER_IMAGE }} \
+          --set image.tag=${{ env.DOCKER_TAG }} \
+          --set secrets.adminApiKey=${{ secrets.ADMIN_API_KEY }} \
+          --set secrets.userApiKey=${{ secrets.USER_API_KEY }} \
+          --set secrets.jwtSecret=${{ secrets.JWT_SECRET }} \
+          --create-namespace --wait
 
   deploy-production:
     name: Deploy to Production (Blue-Green)
@@ -168,65 +164,60 @@ jobs:
     environment: production
     
     steps:
-    - name: Check for required secrets
-      if: "${{ secrets.KUBE_CONFIG_PRODUCTION == '' }}"
-      run: |
-        echo "::error::KUBE_CONFIG_PRODUCTION secret is not configured"
-        exit 1
-        
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: Set AKS context
+      uses: azure/aks-set-context@v3
+      with:
+        resource-group: '<RESOURCE_GROUP_NAME>'
+        cluster-name: '<AKS_CLUSTER_NAME>'
+
     - name: Checkout code
       uses: actions/checkout@v3
-      
-    - name: Install kubectl
-      uses: azure/setup-kubectl@v3
-      
-    - name: Configure Kubernetes
-      uses: azure/k8s-set-context@v3
-      with:
-        method: kubeconfig
-        kubeconfig: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
         
     - name: Deploy to Kubernetes (Production - Blue-Green)
       env:
         KUBE_NAMESPACE: ${{ env.KUBE_NAMESPACE }}-production
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        # Apply common resources
-        kubectl apply -f ./k8s/namespace.yaml
-        kubectl apply -f ./k8s/configmap.yaml -n $KUBE_NAMESPACE
-        kubectl apply -f ./k8s/secret.yaml -n $KUBE_NAMESPACE
-        
-        # Determine current active deployment (blue or green)
-        CURRENT_COLOR=$(kubectl get svc api-gateway -n $KUBE_NAMESPACE -o jsonpath='{.spec.selector.app.kubernetes.io/color}') || true
-        
+        # The AZURE_CREDENTIALS and other secrets are expected to be set in the repository's secrets configuration.
+        # Linter warnings about them are expected and can be ignored.
+
+        # Determine current active color from the service selector.
+        # If the service doesn't exist or has no color label, we default to 'green' for the first deployment.
+        CURRENT_COLOR=$(kubectl get svc api-gateway -n $KUBE_NAMESPACE -o jsonpath='{.spec.selector.app\.kubernetes\.io/color}' 2>/dev/null) || echo "green"
+
         if [ "$CURRENT_COLOR" = "blue" ]; then
-          NEW_COLOR=green
+          NEXT_COLOR="green"
         else
-          NEW_COLOR=blue
+          NEXT_COLOR="blue"
         fi
-        
-        echo "Current active color: ${CURRENT_COLOR:-none}"
-        echo "Deploying to: $NEW_COLOR"
-        
-        # Deploy new version
-        cat ./k8s/deployment.yaml | \
-          sed "s|{{IMAGE_TAG}}|$IMAGE_TAG|g" | \
-          sed "s|blue|$NEW_COLOR|g" | \
-          kubectl apply -f - -n $KUBE_NAMESPACE
-        
-        # Wait for new deployment to be ready
-        kubectl rollout status deployment/api-gateway-$NEW_COLOR -n $KUBE_NAMESPACE --timeout=300s
-        
-        # Update service to point to new deployment
-        cat ./k8s/service.yaml | \
-          sed "s|blue|$NEW_COLOR|g" | \
-          kubectl apply -f - -n $KUBE_NAMESPACE
-        
-        # Clean up old deployment if it exists
-        if [ -n "$CURRENT_COLOR" ]; then
-          echo "Cleaning up old deployment: $CURRENT_COLOR"
-          kubectl delete deployment api-gateway-$CURRENT_COLOR -n $KUBE_NAMESPACE || true
+
+        echo "Current active color: $CURRENT_COLOR"
+        echo "Deploying new version with color: $NEXT_COLOR"
+
+        # Use Helm to deploy the new version. The release name includes the color.
+        helm upgrade --install api-gateway-production-$NEXT_COLOR ./k8s --namespace $KUBE_NAMESPACE \
+          --set image.repository=${{ env.DOCKER_IMAGE }} \
+          --set image.tag=${{ env.DOCKER_TAG }} \
+          --set secrets.adminApiKey=${{ secrets.ADMIN_API_KEY }} \
+          --set secrets.userApiKey=${{ secrets.USER_API_KEY }} \
+          --set secrets.jwtSecret=${{ secrets.JWT_SECRET }} \
+          --set color=$NEXT_COLOR \
+          --create-namespace --wait
+
+        echo "Switching service traffic to $NEXT_COLOR"
+        # Switch the service to point to the new color.
+        kubectl patch svc api-gateway -n $KUBE_NAMESPACE -p "{\"spec\":{\"selector\":{\"app.kubernetes.io/color\":\"$NEXT_COLOR\"}}}"
+
+        # Clean up the old deployment if it exists and is different from the new one.
+        if [ "$CURRENT_COLOR" != "" ] && [ "$CURRENT_COLOR" != "$NEXT_COLOR" ]; then
+          echo "Scaling down and removing old deployment ($CURRENT_COLOR)"
+          helm uninstall api-gateway-production-$CURRENT_COLOR -n $KUBE_NAMESPACE
         fi
-        
-        # Apply ingress (if not already applied)
-        kubectl apply -f ./k8s/ingress.yaml -n $KUBE_NAMESPACE
