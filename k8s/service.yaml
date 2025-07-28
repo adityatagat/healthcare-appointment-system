@@ -15,4 +15,4 @@ spec:
   selector:
     app.kubernetes.io/name: api-gateway
     app.kubernetes.io/instance: api-gateway
-    app.kubernetes.io/color: {{ include "common.names.color" . | default "blue" }}
+    app.kubernetes.io/color: {{ .Values.color }}

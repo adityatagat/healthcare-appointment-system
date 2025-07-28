@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: api-gateway-{{ include "common.names.color" . | default "blue" }}
+  name: api-gateway-{{ .Values.color }}
   labels:
     app.kubernetes.io/name: api-gateway
     app.kubernetes.io/instance: api-gateway
-    app.kubernetes.io/color: {{ include "common.names.color" . | default "blue" }}
+    app.kubernetes.io/color: {{ .Values.color }}
 spec:
-  replicas: 2
+  replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
       app.kubernetes.io/name: api-gateway
       app.kubernetes.io/instance: api-gateway
-      app.kubernetes.io/color: {{ include "common.names.color" . | default "blue" }}
+      app.kubernetes.io/color: {{ .Values.color }}
   strategy:
     rollingUpdate:
       maxSurge: 1
@@ -25,9 +25,12 @@ spec:
         app.kubernetes.io/instance: api-gateway
         app.kubernetes.io/color: {{ include "common.names.color" . | default "blue" }}
     spec:
+      # Uncomment the following if pulling from a private registry:
+      # imagePullSecrets:
+      #   - name: regcred
       containers:
       - name: api-gateway
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000

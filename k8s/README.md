@@ -51,16 +51,20 @@ kubectl apply -f secrets.enc.yaml -n healthcare-app
 
 ### 4. Deploy the Application
 
-#### Using Helm (Recommended)
+#### Using Helm (Recommended for Local Minikube)
 
 ```bash
-helm upgrade --install api-gateway ./charts/api-gateway \
-  --namespace healthcare-app \
-  --set image.tag=latest \
+helm upgrade --install api-gateway ./k8s \
+  --namespace default \
+  --set image.repository=ghcr.io/<your-gh-username>/healthcare-appointment-system/api-gateway \
+  --set image.tag=<GITHUB_SHA> \
   --set secrets.adminApiKey="your-admin-key" \
   --set secrets.userApiKey="your-user-key" \
-  --set secrets.jwtSecret="your-jwt-secret"
+  --set secrets.jwtSecret="your-jwt-secret" \
+  --create-namespace --wait
 ```
+
+> Note: If your GHCR repo is private, create an imagePullSecret in Minikube and reference it in your deployment.yaml.
 
 #### Using kubectl
 
