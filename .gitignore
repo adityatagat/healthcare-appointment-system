@@ -206,3 +206,4 @@ services/appointment-service/node_modules/tdigest/dist/tdigest.js
 services/appointment-service/node_modules/tdigest/specs/digest.spec.js
 services/appointment-service/node_modules/tdigest/specs/discrete.spec.js
 services/appointment-service/node_modules/tdigest/specs/tdigest.spec.js
+actions-runner/

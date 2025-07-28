@@ -1,5 +1,6 @@
 image:
   repository: ghcr.io/adityatagat/healthcare-appointment-system/api-gateway
+  # This will be set by CI/CD pipeline to the GitHub SHA
   tag: ""
 
 replicaCount: 2

@@ -25,6 +25,9 @@ spec:
         app.kubernetes.io/instance: api-gateway
         app.kubernetes.io/color: {{ include "common.names.color" . | default "blue" }}
     spec:
+      # Uncomment the following if pulling from a private registry:
+      # imagePullSecrets:
+      #   - name: regcred
       containers:
       - name: api-gateway
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"

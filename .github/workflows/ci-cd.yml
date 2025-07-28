@@ -118,39 +118,35 @@ jobs:
         cache-to: type=ghac,mode=max
 
   deploy-staging:
-    name: Deploy to Staging
+    name: Deploy to Local Minikube (Staging)
     needs: build-and-push
     if: github.ref == 'refs/heads/develop'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment: staging
-    
+
     steps:
-    - name: Login to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v3
-
-    - name: Set AKS context
-      uses: azure/aks-set-context@v3
-      with:
-        resource-group: '<RESOURCE_GROUP_NAME>'
-        cluster-name: '<AKS_CLUSTER_NAME>'
-
     - name: Checkout code
       uses: actions/checkout@v3
-        
-    - name: Deploy to Kubernetes (Staging)
+
+    - name: Build Docker image
+      run: |
+        docker build -t ghcr.io/${{ github.repository }}/api-gateway:${{ github.sha }} ./api-gateway
+
+    - name: Log in to GHCR
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+    - name: Push Docker image
+      run: |
+        docker push ghcr.io/${{ github.repository }}/api-gateway:${{ github.sha }}
+
+    - name: Deploy to Minikube via Helm
       env:
-        KUBE_NAMESPACE: ${{ env.KUBE_NAMESPACE }}-staging
+        KUBE_NAMESPACE: default
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        # The AZURE_CREDENTIALS secret is expected to be set in the repository's secrets configuration.
-        helm upgrade --install api-gateway-staging ./k8s --namespace $KUBE_NAMESPACE \
-          --set image.repository=${{ env.DOCKER_IMAGE }} \
-          --set image.tag=${{ env.DOCKER_TAG }} \
+        helm upgrade --install api-gateway ./k8s --namespace $KUBE_NAMESPACE \
+          --set image.repository=ghcr.io/${{ github.repository }}/api-gateway \
+          --set image.tag=${{ github.sha }} \
           --set secrets.adminApiKey=${{ secrets.ADMIN_API_KEY }} \
           --set secrets.userApiKey=${{ secrets.USER_API_KEY }} \
           --set secrets.jwtSecret=${{ secrets.JWT_SECRET }} \
