@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.healthcare.providerservice.controller.PracticeControllerIntegrationTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.758 s - in com.healthcare.providerservice.controller.PracticeControllerIntegrationTest
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.833 s - in com.healthcare.providerservice.controller.PracticeControllerIntegrationTest
