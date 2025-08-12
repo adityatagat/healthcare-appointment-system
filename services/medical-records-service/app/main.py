@@ -30,7 +30,12 @@ if not is_pytest():
 
 # --- End OpenTelemetry Setup ---
 
-app = FastAPI(title="Medical Records Service", version="1.0.0")
+app = FastAPI(
+    title="Medical Records Service",
+    version="1.0.0",
+    openapi_url="/openapi.json",
+    docs_url="/api-docs"
+)
 
 # Instrument FastAPI with OpenTelemetry
 FastAPIInstrumentor.instrument_app(app)
@@ -47,8 +52,12 @@ def health():
     return {"status": "UP"}
 
 # Include routers
+from app.routers import conditions, procedures
+
 def include_routers():
     app.include_router(records.router, prefix="/api/v1/records", tags=["Medical Records"])
+    app.include_router(conditions.router, prefix="/api/v1/conditions", tags=["Conditions"])
+    app.include_router(procedures.router, prefix="/api/v1/procedures", tags=["Procedures"])
 
 include_routers()
 
